@@ -1,83 +1,34 @@
 package main
 
 import (
-	"app/config"
-	"app/controller"
-	"app/models"
-	"app/storage/jsonDb"
 	"fmt"
 	"log"
+	"net/http"
+
+	"app/config"
+	"app/controller"
+	"app/storage/postgresql"
 )
 
 func main() {
 	cfg := config.Load()
 
-	jsonDb, err := jsonDb.NewFileJson(&cfg)
+	store, err := postgresql.NewConnectPostgresql(&cfg)
 	if err != nil {
-		log.Fatal("error while connecting to database")
-	}
-	defer jsonDb.CloseDb()
-
-	c := controller.NewController(&cfg, jsonDb)
-
-	Product(c)
-}
-
-func Product(c *controller.Controller) {
-
-	// c.CreateProduct(&models.CreateProduct{
-	// 	Name:       "Smartfon vivo V25 8/256 GB",
-	// 	Price:      4_860_000,
-	// 	CategoryID: "6325b81f-9a2b-48ef-8d38-5cef642fed6b",
-	// })
-
-	// product, err := c.GetByIdProduct(&models.ProductPrimaryKey{Id: "38292285-4c27-497b-bc5f-dfe418a9f959"})
-
-	// if err != nil {
-	// 	log.Println(err)
-	// 	return
-	// }
-
-	products, err := c.GetAllProduct(
-		&models.GetListProductRequest{
-			Offset:     0,
-			Limit:      1,
-			CategoryID: "6325b81f-9a2b-48ef-8d38-5cef642fed6b",
-		},
-	)
-
-	if err != nil {
-		log.Println(err)
+		log.Println("Error connect to postgresql: ", err.Error())
 		return
 	}
 
-	for in, product := range products.Products {
-		fmt.Println(in+1, product)
-	}
-}
+	defer store.CloseDB()
 
-func Category(c *controller.Controller) {
-	// c.CreateCategory(&models.CreateCategory{
-	// 	Name:     "Smartfonlar va telefonlar",
-	// 	ParentID: "eed2e676-1f17-429f-b75c-899eda296e65",
-	// })
+	newController := controller.NewController(&cfg, store)
 
-	category, err := c.GetByIdCategory(&models.CategoryPrimaryKey{Id: "eed2e676-1f17-429f-b75c-899eda296e65"})
+	http.HandleFunc("/book", newController.BookController)
+
+	fmt.Println("Listening Server", cfg.ServerHost+cfg.ServerPort)
+	err = http.ListenAndServe(cfg.ServerHost+cfg.ServerPort, nil)
 	if err != nil {
-		log.Println(err)
+		log.Println("Error listening server:", err.Error())
 		return
-	}
-
-	fmt.Println(category)
-
-}
-
-func User(c *controller.Controller) {
-
-	sender := "bbda487b-1c0f-4c93-b17f-47b8570adfa6"
-	receiver := "657a41b6-1bdc-47cc-bdad-1f85eb8fb98c"
-	err := c.MoneyTransfer(sender, receiver, 500_000)
-	if err != nil {
-		log.Println(err)
 	}
 }

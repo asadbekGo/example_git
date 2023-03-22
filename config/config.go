@@ -1,21 +1,27 @@
 package config
 
 type Config struct {
-	UserFileName       string
-	ProductFileName    string
-	ShopCartFileName   string
-	CommissionFileName string
-	CategoryName       string
+	ServerHost string
+	ServerPort string
+
+	PostgresHost     string
+	PostgresUser     string
+	PostgresDatabase string
+	PostgresPassword string
+	PostgresPort     string
 }
 
 func Load() Config {
 	cfg := Config{}
 
-	cfg.UserFileName = "./data/user.json"
-	cfg.ProductFileName = "./data/product.json"
-	cfg.ShopCartFileName = "./data/shop_cart.json"
-	cfg.CommissionFileName = "./data/commission.json"
-	cfg.CategoryName = "./data/category.json"
+	cfg.ServerHost = "localhost"
+	cfg.ServerPort = ":4000"
+
+	cfg.PostgresHost = "localhost"
+	cfg.PostgresUser = "asadbek"
+	cfg.PostgresDatabase = "shopcart"
+	cfg.PostgresPassword = "7562462"
+	cfg.PostgresPort = "5432"
 
 	return cfg
 }
