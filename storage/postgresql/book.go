@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"app/models"
+	"app/api/models"
 )
 
 type bookRepo struct {
@@ -117,8 +117,6 @@ func (r *bookRepo) GetList(req *models.GetListBookRequest) (resp *models.GetList
 	}
 
 	query += filter + offset + limit
-
-	fmt.Println(":::Query:", query)
 
 	rows, err := r.db.Query(query)
 	defer rows.Close()

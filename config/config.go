@@ -28,11 +28,14 @@ type Config struct {
 	PostgresDatabase string
 	PostgresPassword string
 	PostgresPort     string
+
+	DefaultOffset int
+	DefaultLimit  int
 }
 
 func Load() Config {
 
-	if err := godotenv.Load("/secrets/app.env"); err != nil {
+	if err := godotenv.Load("./app.env"); err != nil {
 		fmt.Println("No .env file found")
 	}
 
@@ -46,6 +49,9 @@ func Load() Config {
 	cfg.PostgresUser = cast.ToString(getOrReturnDefaultValue("POSTGRES_USER", "asadbek"))
 	cfg.PostgresPassword = cast.ToString(getOrReturnDefaultValue("POSTGRES_PASSWORD", "7562462"))
 	cfg.PostgresDatabase = cast.ToString(getOrReturnDefaultValue("POSTGRES_DATABASE", "shopcart"))
+
+	cfg.DefaultOffset = cast.ToInt(getOrReturnDefaultValue("OFFSET", 0))
+	cfg.DefaultLimit = cast.ToInt(getOrReturnDefaultValue("LIMIT", 10))
 
 	return cfg
 }
