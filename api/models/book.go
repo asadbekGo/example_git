@@ -4,6 +4,7 @@ type Book struct {
 	Id        string  `json:"id"`
 	Name      string  `json:"name"`
 	Price     float64 `json:"price"`
+	Status    string  `json:"status"`
 	CreatedAt string  `json:"created_at"`
 	UpdatedAt string  `json:"updated_at"`
 }
@@ -13,14 +14,16 @@ type BookPrimaryKey struct {
 }
 
 type CreateBook struct {
-	Name  string  `json:"name"`
-	Price float64 `json:"price"`
+	Name   string  `json:"name"`
+	Price  float64 `json:"price"`
+	Status string  `json:"status"`
 }
 
 type UpdateBook struct {
-	Id    string  `json:"id"`
-	Name  string  `json:"name"`
-	Price float64 `json:"price"`
+	Id     string  `json:"id"`
+	Name   string  `json:"name"`
+	Price  float64 `json:"price"`
+	Status string  `json:"status"`
 }
 
 type GetListBookRequest struct {

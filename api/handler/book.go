@@ -77,3 +77,60 @@ func (h *Handler) GetListBook(c *gin.Context) {
 
 	h.handlerResponse(c, "get list book response", http.StatusOK, resp)
 }
+
+func (h *Handler) UpdateBook(c *gin.Context) {
+
+	var updateBook models.UpdateBook
+
+	id := c.Param("id")
+
+	if !helper.IsValidUUID(id) {
+		h.handlerResponse(c, "get by id book", http.StatusBadRequest, "invalid book id")
+		return
+	}
+
+	err := c.ShouldBindJSON(&updateBook)
+	if err != nil {
+		h.handlerResponse(c, "update book", http.StatusBadRequest, err.Error())
+		return
+	}
+
+	updateBook.Id = id
+
+	rowsAffected, err := h.storages.Book().Update(&updateBook)
+	if err != nil {
+		h.handlerResponse(c, "storage.book.update", http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if rowsAffected <= 0 {
+		h.handlerResponse(c, "storage.book.update", http.StatusBadRequest, "now rows affected")
+		return
+	}
+
+	resp, err := h.storages.Book().GetByID(&models.BookPrimaryKey{Id: id})
+	if err != nil {
+		h.handlerResponse(c, "storage.book.getByID", http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.handlerResponse(c, "update book", http.StatusAccepted, resp)
+}
+
+func (h *Handler) DeleteBook(c *gin.Context) {
+
+	id := c.Param("id")
+
+	if !helper.IsValidUUID(id) {
+		h.handlerResponse(c, "get by id book", http.StatusBadRequest, "invalid book id")
+		return
+	}
+
+	err := h.storages.Book().Delete(&models.BookPrimaryKey{Id: id})
+	if err != nil {
+		h.handlerResponse(c, "storage.book.update", http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.handlerResponse(c, "update book", http.StatusAccepted, nil)
+}

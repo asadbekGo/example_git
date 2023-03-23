@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"app/api/models"
+	"app/pkg/helper"
 )
 
 type bookRepo struct {
@@ -52,8 +53,13 @@ func (r *bookRepo) Create(req *models.CreateBook) (string, error) {
 func (r *bookRepo) GetByID(req *models.BookPrimaryKey) (*models.Book, error) {
 
 	var (
-		query string
-		book  models.Book
+		query     string
+		id        sql.NullString
+		name      sql.NullString
+		price     sql.NullFloat64
+		status    sql.NullString
+		createdAt sql.NullString
+		updatedAt sql.NullString
 	)
 
 	query = `
@@ -61,6 +67,7 @@ func (r *bookRepo) GetByID(req *models.BookPrimaryKey) (*models.Book, error) {
 			id,
 			name,
 			price,
+			status,
 			created_at,
 			updated_at
 		FROM book
@@ -68,18 +75,26 @@ func (r *bookRepo) GetByID(req *models.BookPrimaryKey) (*models.Book, error) {
 	`
 
 	err := r.db.QueryRow(query, req.Id).Scan(
-		&book.Id,
-		&book.Name,
-		&book.Price,
-		&book.CreatedAt,
-		&book.UpdatedAt,
+		&id,
+		&name,
+		&price,
+		&status,
+		&createdAt,
+		&updatedAt,
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &book, nil
+	return &models.Book{
+		Id:        id.String,
+		Name:      name.String,
+		Price:     price.Float64,
+		Status:    status.String,
+		CreatedAt: createdAt.String,
+		UpdatedAt: updatedAt.String,
+	}, nil
 }
 
 func (r *bookRepo) GetList(req *models.GetListBookRequest) (resp *models.GetListBookResponse, err error) {
@@ -99,7 +114,8 @@ func (r *bookRepo) GetList(req *models.GetListBookRequest) (resp *models.GetList
 			id,
 			name,
 			price,
-			created_at,
+			COALESCE(status, ''),
+			TO_CHAR(created_at, 'YYYY-MM-DD HH24-MI-SS'),
 			updated_at
 		FROM book
 	`
@@ -119,11 +135,10 @@ func (r *bookRepo) GetList(req *models.GetListBookRequest) (resp *models.GetList
 	query += filter + offset + limit
 
 	rows, err := r.db.Query(query)
-	defer rows.Close()
-
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 
@@ -133,6 +148,7 @@ func (r *bookRepo) GetList(req *models.GetListBookRequest) (resp *models.GetList
 			&book.Id,
 			&book.Name,
 			&book.Price,
+			&book.Status,
 			&book.CreatedAt,
 			&book.UpdatedAt,
 		)
@@ -145,4 +161,55 @@ func (r *bookRepo) GetList(req *models.GetListBookRequest) (resp *models.GetList
 	}
 
 	return resp, nil
+}
+
+func (r *bookRepo) Update(req *models.UpdateBook) (int64, error) {
+
+	var (
+		query  string
+		params map[string]interface{}
+	)
+
+	query = `
+		UPDATE
+			book
+		SET
+			name = :name,
+			price = :price,
+			updated_at = now()
+		WHERE id = :id
+	`
+
+	params = map[string]interface{}{
+		"id":    req.Id,
+		"name":  req.Name,
+		"price": req.Price,
+	}
+
+	query, args := helper.ReplaceQueryParams(query, params)
+
+	result, err := r.db.Exec(query, args...)
+	if err != nil {
+		return 0, err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+
+	return rowsAffected, nil
+}
+
+func (r *bookRepo) Delete(req *models.BookPrimaryKey) error {
+
+	_, err := r.db.Exec(
+		"DELETE FROM book WHERE id = $1", req.Id,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
