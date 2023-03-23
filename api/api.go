@@ -13,6 +13,8 @@ func NewApi(r *gin.Engine, cfg *config.Config, store storage.StorageI, logger lo
 
 	handler := handler.NewHandler(cfg, store, logger)
 
+	r.POST("/book", handler.CreateBook)
+	r.GET("/book/:id", handler.GetByIdBook)
 	r.GET("/book", handler.GetListBook)
 
 }
