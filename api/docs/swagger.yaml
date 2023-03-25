@@ -16,6 +16,14 @@ definitions:
       status:
         type: string
     type: object
+  models.PatchRequest:
+    properties:
+      fields:
+        additionalProperties: true
+        type: object
+      id:
+        type: string
+    type: object
 info:
   contact: {}
 paths:
@@ -159,6 +167,56 @@ paths:
                   type: string
               type: object
       summary: Get By ID Book
+      tags:
+      - Book
+    patch:
+      consumes:
+      - application/json
+      description: Update Patch Book
+      operationId: updat_patch_book
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: UpdatPatchBookRequest
+        in: body
+        name: book
+        required: true
+        schema:
+          $ref: '#/definitions/models.PatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "500":
+          description: Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+      summary: Update Patch Book
       tags:
       - Book
 swagger: "2.0"

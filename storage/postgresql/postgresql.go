@@ -1,43 +1,42 @@
 package postgresql
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
 
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx/v4/pgxpool"
 
 	"app/config"
 	"app/storage"
 )
 
 type Store struct {
-	db   *sql.DB
+	db   *pgxpool.Pool
 	book storage.BookRepoI
 }
 
 func NewConnectPostgresql(cfg *config.Config) (storage.StorageI, error) {
 
-	connection := fmt.Sprintf(
-		"host=%s user=%s database=%s password=%s port=%s sslmode=disable",
+	config, err := pgxpool.ParseConfig(fmt.Sprintf(
+		"host=%s user=%s dbname=%s password=%s port=%s sslmode=disable",
 		cfg.PostgresHost,
 		cfg.PostgresUser,
 		cfg.PostgresDatabase,
 		cfg.PostgresPassword,
 		cfg.PostgresPort,
-	)
-
-	db, err := sql.Open("postgres", connection)
+	))
 	if err != nil {
 		return nil, err
 	}
 
-	if err := db.Ping(); err != nil {
+	pgpool, err := pgxpool.ConnectConfig(context.Background(), config)
+	if err != nil {
 		return nil, err
 	}
 
 	return &Store{
-		db:   db,
-		book: NewBookRepo(db),
+		db:   pgpool,
+		book: NewBookRepo(pgpool),
 	}, nil
 }
 
@@ -53,3 +52,9 @@ func (s *Store) Book() storage.BookRepoI {
 
 	return s.book
 }
+
+// GORM
+// ROW
+// SQLBUILDER
+// SQLX
+// PGXPOOL

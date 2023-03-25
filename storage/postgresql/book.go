@@ -1,26 +1,29 @@
 package postgresql
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v4/pgxpool"
 
 	"app/api/models"
 	"app/pkg/helper"
 )
 
 type bookRepo struct {
-	db *sql.DB
+	db *pgxpool.Pool
 }
 
-func NewBookRepo(db *sql.DB) *bookRepo {
+func NewBookRepo(db *pgxpool.Pool) *bookRepo {
 	return &bookRepo{
 		db: db,
 	}
 }
 
-func (r *bookRepo) Create(req *models.CreateBook) (string, error) {
+func (r *bookRepo) Create(ctx context.Context, req *models.CreateBook) (string, error) {
 
 	var (
 		query string
@@ -37,7 +40,7 @@ func (r *bookRepo) Create(req *models.CreateBook) (string, error) {
 		VALUES ($1, $2, $3, now())
 	`
 
-	_, err := r.db.Exec(query,
+	_, err := r.db.Exec(ctx, query,
 		id.String(),
 		req.Name,
 		req.Price,
@@ -50,7 +53,7 @@ func (r *bookRepo) Create(req *models.CreateBook) (string, error) {
 	return id.String(), nil
 }
 
-func (r *bookRepo) GetByID(req *models.BookPrimaryKey) (*models.Book, error) {
+func (r *bookRepo) GetByID(ctx context.Context, req *models.BookPrimaryKey) (*models.Book, error) {
 
 	var (
 		query     string
@@ -74,7 +77,7 @@ func (r *bookRepo) GetByID(req *models.BookPrimaryKey) (*models.Book, error) {
 		WHERE id = $1
 	`
 
-	err := r.db.QueryRow(query, req.Id).Scan(
+	err := r.db.QueryRow(ctx, query, req.Id).Scan(
 		&id,
 		&name,
 		&price,
@@ -97,7 +100,7 @@ func (r *bookRepo) GetByID(req *models.BookPrimaryKey) (*models.Book, error) {
 	}, nil
 }
 
-func (r *bookRepo) GetList(req *models.GetListBookRequest) (resp *models.GetListBookResponse, err error) {
+func (r *bookRepo) GetList(ctx context.Context, req *models.GetListBookRequest) (resp *models.GetListBookResponse, err error) {
 
 	resp = &models.GetListBookResponse{}
 
@@ -134,7 +137,7 @@ func (r *bookRepo) GetList(req *models.GetListBookRequest) (resp *models.GetList
 
 	query += filter + offset + limit
 
-	rows, err := r.db.Query(query)
+	rows, err := r.db.Query(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +166,7 @@ func (r *bookRepo) GetList(req *models.GetListBookRequest) (resp *models.GetList
 	return resp, nil
 }
 
-func (r *bookRepo) Update(req *models.UpdateBook) (int64, error) {
+func (r *bookRepo) Update(ctx context.Context, req *models.UpdateBook) (int64, error) {
 
 	var (
 		query  string
@@ -188,22 +191,54 @@ func (r *bookRepo) Update(req *models.UpdateBook) (int64, error) {
 
 	query, args := helper.ReplaceQueryParams(query, params)
 
-	result, err := r.db.Exec(query, args...)
+	result, err := r.db.Exec(ctx, query, args...)
 	if err != nil {
 		return 0, err
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return 0, err
-	}
-
-	return rowsAffected, nil
+	return result.RowsAffected(), nil
 }
 
-func (r *bookRepo) Delete(req *models.BookPrimaryKey) error {
+func (r *bookRepo) Patch(ctx context.Context, req *models.PatchRequest) (int64, error) {
 
-	_, err := r.db.Exec(
+	var (
+		query string
+		set   string
+	)
+
+	if len(req.Fields) <= 0 {
+		return 0, errors.New("no fields")
+	}
+
+	for key := range req.Fields {
+		set += fmt.Sprintf(" %s = :%s, ", key, key)
+	}
+
+	query = `
+		UPDATE
+			book
+		SET
+	` + set + ` updated_at = now()
+		WHERE id = :id
+	`
+
+	req.Fields["id"] = req.ID
+
+	fmt.Println(req.Fields)
+
+	query, args := helper.ReplaceQueryParams(query, req.Fields)
+
+	result, err := r.db.Exec(ctx, query, args...)
+	if err != nil {
+		return 0, err
+	}
+
+	return result.RowsAffected(), nil
+}
+
+func (r *bookRepo) Delete(ctx context.Context, req *models.BookPrimaryKey) error {
+
+	_, err := r.db.Exec(ctx,
 		"DELETE FROM book WHERE id = $1", req.Id,
 	)
 

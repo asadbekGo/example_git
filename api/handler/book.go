@@ -3,6 +3,7 @@ package handler
 import (
 	"app/api/models"
 	"app/pkg/helper"
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -30,13 +31,13 @@ func (h *Handler) CreateBook(c *gin.Context) {
 		return
 	}
 
-	id, err := h.storages.Book().Create(&createBook)
+	id, err := h.storages.Book().Create(context.Background(), &createBook)
 	if err != nil {
 		h.handlerResponse(c, "storage.book.create", http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	resp, err := h.storages.Book().GetByID(&models.BookPrimaryKey{Id: id})
+	resp, err := h.storages.Book().GetByID(context.Background(), &models.BookPrimaryKey{Id: id})
 	if err != nil {
 		h.handlerResponse(c, "storage.book.getByID", http.StatusInternalServerError, err.Error())
 		return
@@ -66,7 +67,7 @@ func (h *Handler) GetByIdBook(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.storages.Book().GetByID(&models.BookPrimaryKey{Id: id})
+	resp, err := h.storages.Book().GetByID(context.Background(), &models.BookPrimaryKey{Id: id})
 	if err != nil {
 		h.handlerResponse(c, "storage.book.getByID", http.StatusInternalServerError, err.Error())
 		return
@@ -103,7 +104,7 @@ func (h *Handler) GetListBook(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.storages.Book().GetList(&models.GetListBookRequest{
+	resp, err := h.storages.Book().GetList(context.Background(), &models.GetListBookRequest{
 		Offset: offset,
 		Limit:  limit,
 		Search: c.Query("search"),
@@ -135,7 +136,7 @@ func (h *Handler) UpdateBook(c *gin.Context) {
 
 	updateBook.Id = id
 
-	rowsAffected, err := h.storages.Book().Update(&updateBook)
+	rowsAffected, err := h.storages.Book().Update(context.Background(), &updateBook)
 	if err != nil {
 		h.handlerResponse(c, "storage.book.update", http.StatusInternalServerError, err.Error())
 		return
@@ -146,13 +147,65 @@ func (h *Handler) UpdateBook(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.storages.Book().GetByID(&models.BookPrimaryKey{Id: id})
+	resp, err := h.storages.Book().GetByID(context.Background(), &models.BookPrimaryKey{Id: id})
 	if err != nil {
 		h.handlerResponse(c, "storage.book.getByID", http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	h.handlerResponse(c, "update book", http.StatusAccepted, resp)
+}
+
+// Update Patch Book godoc
+// @ID updat_patch_book
+// @Router /book/{id} [PATCH]
+// @Summary Update Patch Book
+// @Description Update Patch Book
+// @Tags Book
+// @Accept json
+// @Produce json
+// @Param id path string true "id"
+// @Param book body models.PatchRequest true "UpdatPatchBookRequest"
+// @Success 200 {object} Response{data=string} "Success Request"
+// @Response 400 {object} Response{data=string} "Bad Request"
+// @Failure 500 {object} Response{data=string} "Server Error"
+func (h *Handler) UpdatePatchBook(c *gin.Context) {
+
+	var object models.PatchRequest
+
+	id := c.Param("id")
+
+	if !helper.IsValidUUID(id) {
+		h.handlerResponse(c, "get by id book", http.StatusBadRequest, "invalid book id")
+		return
+	}
+
+	err := c.ShouldBindJSON(&object)
+	if err != nil {
+		h.handlerResponse(c, "update patch book", http.StatusBadRequest, err.Error())
+		return
+	}
+
+	object.ID = id
+
+	rowsAffected, err := h.storages.Book().Patch(context.Background(), &object)
+	if err != nil {
+		h.handlerResponse(c, "storage.book.getByID", http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if rowsAffected <= 0 {
+		h.handlerResponse(c, "storage.book.patch", http.StatusBadRequest, "now rows affected")
+		return
+	}
+
+	resp, err := h.storages.Book().GetByID(context.Background(), &models.BookPrimaryKey{Id: object.ID})
+	if err != nil {
+		h.handlerResponse(c, "storage.book.getByID", http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.handlerResponse(c, "update patch book", http.StatusAccepted, resp)
 }
 
 func (h *Handler) DeleteBook(c *gin.Context) {
@@ -164,7 +217,7 @@ func (h *Handler) DeleteBook(c *gin.Context) {
 		return
 	}
 
-	err := h.storages.Book().Delete(&models.BookPrimaryKey{Id: id})
+	err := h.storages.Book().Delete(context.Background(), &models.BookPrimaryKey{Id: id})
 	if err != nil {
 		h.handlerResponse(c, "storage.book.update", http.StatusInternalServerError, err.Error())
 		return
