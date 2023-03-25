@@ -18,5 +18,4 @@ func NewApi(r *gin.Engine, cfg *config.Config, store storage.StorageI, logger lo
 	r.GET("/book", handler.GetListBook)
 	r.PUT("/book/:id", handler.UpdateBook)
 	r.DELETE("/book/:id", handler.DeleteBook)
-
 }
